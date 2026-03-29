@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HighwayOne</title>
+    <style>
+      :root {
+        --ink: #10161b;
+        --muted: #5d6873;
+        --paper: #eef2f4;
+        --panel: rgba(255, 255, 255, 0.8);
+        --panel-strong: rgba(255, 255, 255, 0.92);
+        --line: rgba(16, 22, 27, 0.1);
+        --national: #0000fe;
+        --intercity: #ff0000;
+        --regional: #007e00;
+        --local: #000000;
+        --active: var(--national);
+        --accent: #10324c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family: "Noto Sans Hebrew", "Segoe UI", sans-serif;
+        color: var(--ink);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 15% 20%, rgba(0, 0, 254, 0.12), transparent 28rem),
+          radial-gradient(circle at 82% 18%, rgba(255, 0, 0, 0.08), transparent 22rem),
+          radial-gradient(circle at 68% 78%, rgba(0, 126, 0, 0.12), transparent 26rem),
+          linear-gradient(180deg, #f8fbfc 0%, #edf1f4 100%);
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: minmax(23rem, 30rem) minmax(0, 1fr);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .controls {
+        position: relative;
+        height: 100vh;
+        overflow-y: auto;
+        padding: 2.2rem 1.7rem;
+        border-left: 1px solid var(--line);
+        background:
+          linear-gradient(180deg, rgba(9, 20, 31, 0.92), rgba(18, 35, 52, 0.88)),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+        color: #f4f8fb;
+        backdrop-filter: blur(16px);
+      }
+
+      .controls::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 36%),
+          radial-gradient(circle at top right, rgba(0, 0, 254, 0.2), transparent 14rem);
+        pointer-events: none;
+      }
+
+      .panel-stack {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 1.8rem;
+      }
+
+      .brand-block {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .eyebrow {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(244, 248, 251, 0.62);
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "Noto Sans Hebrew", serif;
+        font-size: clamp(2.7rem, 5vw, 4.3rem);
+        line-height: 0.88;
+        letter-spacing: -0.04em;
+      }
+
+      .lede {
+        margin: 0;
+        max-width: 24rem;
+        color: rgba(244, 248, 251, 0.76);
+        line-height: 1.7;
+      }
+
+      .hero-note {
+        display: grid;
+        gap: 0.45rem;
+        padding: 1rem 1.1rem;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 1.4rem;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .hero-note strong {
+        font-size: 0.92rem;
+      }
+
+      .hero-note span {
+        font-size: 0.88rem;
+        line-height: 1.55;
+        color: rgba(244, 248, 251, 0.7);
+      }
+
+      form {
+        display: grid;
+        gap: 1.35rem;
+      }
+
+      .label {
+        display: block;
+        margin-bottom: 0.8rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+
+      .choice-grid {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .choice-grid.types {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .choice-grid.formats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .choice {
+        position: relative;
+        display: block;
+      }
+
+      .choice input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .choice-body {
+        display: grid;
+        gap: 0.45rem;
+        min-height: 100%;
+        padding: 0.95rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: #f4f8fb;
+        transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+      }
+
+      .choice input:checked + .choice-body {
+        border-color: var(--choice-colour);
+        box-shadow:
+          inset 0 0 0 1px var(--choice-colour),
+          0 20px 34px rgba(0, 0, 0, 0.22);
+      }
+
+      .choice input:focus-visible + .choice-body {
+        outline: 3px solid rgba(255, 255, 255, 0.18);
+        outline-offset: 2px;
+      }
+
+      .swatch {
+        width: 1.1rem;
+        height: 1.1rem;
+        border-radius: 999px;
+        background: var(--choice-colour);
+      }
+
+      .choice strong,
+      .choice span:last-child {
+        display: block;
+      }
+
+      .choice strong {
+        font-size: 0.95rem;
+      }
+
+      .choice span:last-child {
+        font-size: 0.82rem;
+        line-height: 1.45;
+        color: rgba(244, 248, 251, 0.64);
+      }
+
+      .number-input {
+        width: 100%;
+        padding: 1rem 1.05rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 1.05rem;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        font: inherit;
+        font-size: 1.22rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        direction: ltr;
+        text-align: right;
+      }
+
+      .number-input::placeholder {
+        color: rgba(244, 248, 251, 0.42);
+      }
+
+      .number-input:focus {
+        outline: 3px solid rgba(255, 255, 255, 0.14);
+        border-color: var(--active);
+      }
+
+      .helper,
+      .status,
+      .source {
+        margin: 0;
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      .helper,
+      .source {
+        color: rgba(244, 248, 251, 0.68);
+      }
+
+      .status {
+        min-height: 1.5em;
+      }
+
+      .status.error {
+        color: #ffb4b4;
+      }
+
+      .download {
+        padding: 1rem 1.2rem;
+        border: none;
+        border-radius: 999px;
+        background: var(--active);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 140ms ease, opacity 140ms ease, filter 140ms ease;
+      }
+
+      .download:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: saturate(1.05);
+      }
+
+      .download:disabled {
+        opacity: 0.48;
+        cursor: not-allowed;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        align-content: start;
+        gap: 1.6rem;
+        height: 100vh;
+        overflow: hidden;
+        padding: 2rem 2.2rem;
+      }
+
+      .stage {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 29rem;
+        padding: 1.8rem;
+        border: 1px solid rgba(16, 22, 27, 0.08);
+        border-radius: 2.2rem;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 246, 248, 0.96)),
+          radial-gradient(circle at top, rgba(16, 50, 76, 0.06), transparent 46%);
+        box-shadow: 0 30px 70px rgba(16, 22, 27, 0.12);
+        overflow: hidden;
+      }
+
+      .stage::before {
+        content: "";
+        position: absolute;
+        inset: 1.2rem;
+        border-radius: 1.6rem;
+        border: 1px dashed rgba(16, 22, 27, 0.08);
+        pointer-events: none;
+      }
+
+      .preview {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 36rem);
+      }
+
+      .preview svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        filter: drop-shadow(0 18px 24px rgba(21, 21, 21, 0.16));
+      }
+
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: start;
+        gap: 0.85rem;
+      }
+
+      .rule {
+        align-self: stretch;
+        padding: 1rem 1.05rem;
+        border: 1px solid var(--line);
+        border-radius: 1.15rem;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .rule strong,
+      .rule span {
+        display: block;
+      }
+
+      .rule strong {
+        font-size: 0.92rem;
+      }
+
+      .rule span {
+        margin-top: 0.28rem;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 64rem) {
+        body {
+          overflow: auto;
+        }
+
+        .app {
+          grid-template-columns: 1fr;
+          height: auto;
+          overflow: visible;
+        }
+
+        .controls {
+          height: auto;
+          overflow: visible;
+          border-left: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .workspace {
+          height: auto;
+          overflow: visible;
+        }
+
+        .rules {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 42rem) {
+        .controls,
+        .workspace {
+          padding: 1.15rem;
+        }
+
+        body {
+          overflow: auto;
+        }
+
+        .choice-grid.types,
+        .choice-grid.formats,
+        .rules {
+          grid-template-columns: 1fr;
+        }
+
+        .stage {
+          min-height: 19rem;
+          padding: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="controls">
+        <div class="panel-stack">
+          <div class="brand-block">
+            <p class="eyebrow">HighwayOne</p>
+            <h1>מחולל<br>שלטי כבישים.</h1>
+            <p class="lede">
+              ממשק נקי לבניית שלטי כבישי ישראל עם גאומטריה, צבעים וטיפוגרפיה שמכוילים מול שלטים אמיתיים.
+            </p>
+          </div>
+
+          <div class="hero-note">
+            <strong>נבנה לשימוש מהיר</strong>
+            <span>
+              בוחרים סוג כביש, מזינים מספר, ומקבלים תצוגה מדויקת לייצוא ב־SVG או PNG.
+            </span>
+          </div>
+
+          <form id="sign-form" novalidate>
+            <section>
+              <span class="label">סוג כביש</span>
+              <div class="choice-grid types">
+                <label class="choice" style="--choice-colour: var(--national);">
+                  <input type="radio" name="road-type" value="national" checked>
+                  <span class="choice-body">
+                    <span class="swatch" aria-hidden="true"></span>
+                    <span>
+                      <strong>מהיר</strong>
+                      <span>כחול, 1 עד 3 ספרות</span>
+                    </span>
+                  </span>
+                </label>
+
+                <label class="choice" style="--choice-colour: var(--intercity);">
+                  <input type="radio" name="road-type" value="intercity">
+                  <span class="choice-body">
+                    <span class="swatch" aria-hidden="true"></span>
+                    <span>
+                      <strong>ארצי</strong>
+                      <span>אדום, 1 עד 2 ספרות</span>
+                    </span>
+                  </span>
+                </label>
+
+                <label class="choice" style="--choice-colour: var(--regional);">
+                  <input type="radio" name="road-type" value="regional">
+                  <span class="choice-body">
+                    <span class="swatch" aria-hidden="true"></span>
+                    <span>
+                      <strong>אזורי</strong>
+                      <span>ירוק, בדיוק 3 ספרות</span>
+                    </span>
+                  </span>
+                </label>
+
+                <label class="choice" style="--choice-colour: var(--local);">
+                  <input type="radio" name="road-type" value="local">
+                  <span class="choice-body">
+                    <span class="swatch" aria-hidden="true"></span>
+                    <span>
+                      <strong>מקומי</strong>
+                      <span>שחור, בדיוק 4 ספרות</span>
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <label class="label" for="road-number">מספר כביש</label>
+              <input id="road-number" class="number-input" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="ספרות בלבד" aria-describedby="helper status">
+              <p id="helper" class="helper"></p>
+            </section>
+
+            <section>
+              <span class="label">פורמט ייצוא</span>
+              <div class="choice-grid formats">
+                <label class="choice" style="--choice-colour: var(--active);">
+                  <input type="radio" name="export-format" value="svg" checked>
+                  <span class="choice-body">
+                    <span>
+                      <strong>SVG</strong>
+                      <span>קובץ וקטורי לעריכה והדפסה</span>
+                    </span>
+                  </span>
+                </label>
+
+                <label class="choice" style="--choice-colour: var(--active);">
+                  <input type="radio" name="export-format" value="png">
+                  <span class="choice-body">
+                    <span>
+                      <strong>PNG</strong>
+                      <span>קובץ תמונה שקוף לשימוש מיידי</span>
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <button id="download" class="download" type="button">הורדת SVG</button>
+            <p id="status" class="status" aria-live="polite"></p>
+            <p class="source">
+              <!-- חלוקת המספרים נשענת על תקציר הסיווג של כבישי ישראל, והייצוא משלב את גאומטריית הרקע, הצבעים והפונט המוטמע ישירות בתוך הקובץ. -->
+            </p>
+          </form>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="stage" aria-labelledby="preview-heading">
+          <h2 id="preview-heading" class="visually-hidden">תצוגה מקדימה של שלט הכביש</h2>
+          <div id="preview" class="preview"></div>
+        </section>
+
+        <section class="rules" aria-label="כללי סוגי הכבישים">
+          <div class="rule">
+            <strong>כביש מהיר</strong>
+            <span>כחול, ממוספרים במספר חד־ספרתי, דו־ספרתי, או תלת־ספרתי.</span>
+          </div>
+          <div class="rule">
+            <strong>כביש ארצי</strong>
+            <span>אדום, ממוספרים במספר חד־ספרתי או דו־ספרתי.</span>
+          </div>
+          <div class="rule">
+            <strong>כביש אזורי</strong>
+            <span>ירוק, ממוספרים במספר תלת־ספרתי.</span>
+          </div>
+          <div class="rule">
+            <strong>כביש מקומי</strong>
+            <span>שחור, ממוספרים במספר בן ארבע ספרות.</span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module">
+      import {
+        ROAD_TYPES,
+        OUTPUT_SIZE,
+        buildFileName,
+        buildEmbeddedSignSvg,
+        buildSignSvg,
+        getCachedEmbeddedFontDataUrl,
+        getRuleText,
+        primeEmbeddedFont,
+        primeDocumentFont,
+        sanitiseRoadNumber,
+        validateRoadNumber
+      } from "./sign-core.mjs";
+
+      const typeInputs = Array.from(document.querySelectorAll('input[name="road-type"]'));
+      const formatInputs = Array.from(document.querySelectorAll('input[name="export-format"]'));
+      const roadNumberInput = document.querySelector("#road-number");
+      const preview = document.querySelector("#preview");
+      const helper = document.querySelector("#helper");
+      const status = document.querySelector("#status");
+      const fileName = document.querySelector("#file-name");
+      const downloadButton = document.querySelector("#download");
+      let downloadInFlight = false;
+      let embeddedFontReady = false;
+
+      function getSelectedValue(inputs) {
+        return inputs.find((input) => input.checked)?.value;
+      }
+
+      function setStatus(message, isError) {
+        status.textContent = message;
+        status.classList.toggle("error", isError);
+      }
+
+      function updateButtonLabel() {
+        const format = getSelectedValue(formatInputs);
+        downloadButton.textContent = `הורדת ${format.toUpperCase()}`;
+      }
+
+      function syncUi() {
+        const typeKey = getSelectedValue(typeInputs);
+        const config = ROAD_TYPES[typeKey];
+        const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
+        const validation = validateRoadNumber(typeKey, roadNumber);
+
+        if (roadNumberInput.value !== roadNumber) {
+          roadNumberInput.value = roadNumber;
+        }
+
+        document.documentElement.style.setProperty("--active", config.colour);
+        helper.textContent = getRuleText(config);
+        preview.innerHTML = buildSignSvg(typeKey, roadNumber);
+        updateButtonLabel();
+
+        if (validation.valid) {
+          fileName.textContent = `${buildFileName(typeKey, roadNumber)}.${getSelectedValue(formatInputs)}`;
+          setStatus("מוכן להורדה ב־SVG או PNG.", false);
+          downloadButton.disabled = false;
+          return;
+        }
+
+        fileName.textContent = "ממתין למספר כביש תקין";
+        setStatus(validation.message, true);
+        downloadButton.disabled = true;
+      }
+
+      function downloadBlob(blob, downloadName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = downloadName;
+        link.style.display = "none";
+        document.body.append(link);
+        link.click();
+        link.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function renderPngBlob(svgMarkup) {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        const width = OUTPUT_SIZE.width;
+        const height = OUTPUT_SIZE.height;
+        const scale = window.devicePixelRatio > 1 ? 4 : 3;
+
+        if (!context) {
+          return Promise.reject(new Error("Canvas not supported"));
+        }
+
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        context.scale(scale, scale);
+
+        return new Promise((resolve, reject) => {
+          const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const image = new Image();
+
+          image.onload = () => {
+            context.clearRect(0, 0, width, height);
+            context.drawImage(image, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+
+            canvas.toBlob((pngBlob) => {
+              if (!pngBlob) {
+                reject(new Error("PNG conversion failed"));
+                return;
+              }
+
+              resolve(pngBlob);
+            }, "image/png");
+          };
+
+          image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("SVG image could not be loaded"));
+          };
+
+          image.src = url;
+        });
+      }
+
+      async function handleDownload() {
+        if (downloadInFlight) {
+          return;
+        }
+
+        const typeKey = getSelectedValue(typeInputs);
+        const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
+        const validation = validateRoadNumber(typeKey, roadNumber);
+
+        if (!validation.valid) {
+          syncUi();
+          roadNumberInput.focus();
+          return;
+        }
+
+        const format = getSelectedValue(formatInputs);
+        downloadInFlight = true;
+        downloadButton.setAttribute("aria-busy", "true");
+        downloadButton.textContent = format === "svg" ? "מכין SVG..." : "מכין PNG...";
+
+        try {
+          if (!embeddedFontReady) {
+            await primeEmbeddedFont();
+            embeddedFontReady = true;
+          }
+
+          const svgMarkup =
+            buildSignSvg(typeKey, roadNumber, {
+              fontDataUrl: getCachedEmbeddedFontDataUrl()
+            });
+          const baseFileName = buildFileName(typeKey, roadNumber);
+
+          if (format === "svg") {
+            downloadBlob(new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" }), `${baseFileName}.svg`);
+            setStatus("קובץ SVG נוצר.", false);
+            return;
+          }
+
+          const pngBlob = await renderPngBlob(svgMarkup);
+          downloadBlob(pngBlob, `${baseFileName}.png`);
+          setStatus("קובץ PNG נוצר.", false);
+        } catch (error) {
+          console.error(error);
+          setStatus(format === "svg" ? "הייצוא ל־SVG נכשל." : "הייצוא ל־PNG נכשל בדפדפן הזה. אפשר לנסות SVG.", true);
+        } finally {
+          downloadInFlight = false;
+          downloadButton.removeAttribute("aria-busy");
+          syncUi();
+        }
+      }
+
+      roadNumberInput.addEventListener("input", syncUi);
+      typeInputs.forEach((input) => input.addEventListener("change", syncUi));
+      formatInputs.forEach((input) => input.addEventListener("change", syncUi));
+      downloadButton.addEventListener("click", handleDownload);
+
+      syncUi();
+      primeDocumentFont(document).then(syncUi, syncUi);
+      primeEmbeddedFont()
+        .then(() => {
+          embeddedFontReady = true;
+        })
+        .catch(() => {
+          embeddedFontReady = false;
+        });
+    </script>
+  </body>
+</html>
