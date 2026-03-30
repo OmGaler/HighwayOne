@@ -1,5 +1,7 @@
 export const FONT_FAMILY = "IsraeliRoad";
 
+import { NIMBUS_BOLD_DATA_URL } from "./nimbus-bold-data.mjs";
+
 export const FONT_VARIANTS = {
   
   nimbusBold: {
@@ -7,13 +9,12 @@ export const FONT_VARIANTS = {
     fileName: "NimbusSans-Bold.ttf",
     format: "truetype",
     weight: 700,
+    dataUrl: NIMBUS_BOLD_DATA_URL,
     strokeWidth: 0.38
   }
 };
 
 export const DEFAULT_FONT_KEY = "nimbusBold";
-
-const FONT_DATA_CACHE = new Map();
 
 const FONT_TEXT_SPECS = {
   default: {
@@ -275,39 +276,9 @@ function getPreviewNumber(typeKey, roadNumber) {
   return roadNumber || ROAD_TYPES[typeKey].sample;
 }
 
-async function getFontDataUrl(fontKey = DEFAULT_FONT_KEY) {
-  const variant = FONT_VARIANTS[fontKey];
-
-  if (!variant) {
-    throw new Error(`Unknown font variant: ${fontKey}`);
-  }
-
-  if (FONT_DATA_CACHE.has(fontKey)) {
-    return FONT_DATA_CACHE.get(fontKey);
-  }
-
-  const response = await fetch(`./${variant.fileName}`);
-
-  if (!response.ok) {
-    throw new Error(`Unable to load font file: ${variant.fileName}`);
-  }
-
-  const buffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  const dataUrl = `data:font/${variant.format};base64,${btoa(binary)}`;
-  FONT_DATA_CACHE.set(fontKey, dataUrl);
-  return dataUrl;
-}
-
 function buildFontFaceCss(fontKey = DEFAULT_FONT_KEY, srcOverride) {
   const variant = FONT_VARIANTS[fontKey];
-  const src = srcOverride ?? `./${variant.fileName}`;
+  const src = srcOverride ?? variant.dataUrl ?? `./${variant.fileName}`;
 
   return `@font-face {
     font-family: "${FONT_FAMILY}";
@@ -350,18 +321,15 @@ export async function primeDocumentFont(document, fontKey = DEFAULT_FONT_KEY) {
 }
 
 export async function buildEmbeddedSignSvg(typeKey, roadNumber, options = {}) {
-  const fontKey = options.fontKey ?? DEFAULT_FONT_KEY;
-  const fontDataUrl = await getFontDataUrl(fontKey);
-
-  return buildSignSvg(typeKey, roadNumber, { ...options, fontDataUrl });
+  return buildSignSvg(typeKey, roadNumber, options);
 }
 
-export async function primeEmbeddedFont(fontKey = DEFAULT_FONT_KEY) {
-  await getFontDataUrl(fontKey);
+export async function primeEmbeddedFont() {
+  return;
 }
 
 export function getCachedEmbeddedFontDataUrl(fontKey = DEFAULT_FONT_KEY) {
-  return FONT_DATA_CACHE.get(fontKey) ?? null;
+  return FONT_VARIANTS[fontKey]?.dataUrl ?? null;
 }
 
 export function buildSignSvg(typeKey, roadNumber, options = {}) {

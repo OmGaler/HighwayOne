@@ -276,6 +276,34 @@
         cursor: not-allowed;
       }
 
+      .action-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+      }
+
+      .secondary-action {
+        padding: 1rem 1.2rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 140ms ease, opacity 140ms ease, border-color 140ms ease;
+      }
+
+      .secondary-action:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.34);
+      }
+
+      .secondary-action:disabled {
+        opacity: 0.48;
+        cursor: not-allowed;
+      }
+
       .workspace {
         display: grid;
         grid-template-rows: minmax(0, 1fr) auto;
@@ -517,7 +545,10 @@
               </div>
             </section>
 
-            <button id="download" class="download" type="button">הורדת SVG</button>
+            <div class="action-row">
+              <button id="download" class="download" type="button">הורדת SVG</button>
+              <button id="copy" class="secondary-action" type="button">העתקת SVG</button>
+            </div>
             <p id="status" class="status" aria-live="polite"></p>
             <p class="source">
               <!-- חלוקת המספרים נשענת על תקציר הסיווג של כבישי ישראל, והייצוא משלב את גאומטריית הרקע, הצבעים והפונט המוטמע ישירות בתוך הקובץ. -->
@@ -558,11 +589,8 @@
         ROAD_TYPES,
         OUTPUT_SIZE,
         buildFileName,
-        buildEmbeddedSignSvg,
         buildSignSvg,
-        getCachedEmbeddedFontDataUrl,
         getRuleText,
-        primeEmbeddedFont,
         primeDocumentFont,
         sanitiseRoadNumber,
         validateRoadNumber
@@ -574,10 +602,9 @@
       const preview = document.querySelector("#preview");
       const helper = document.querySelector("#helper");
       const status = document.querySelector("#status");
-      const fileName = document.querySelector("#file-name");
       const downloadButton = document.querySelector("#download");
+      const copyButton = document.querySelector("#copy");
       let downloadInFlight = false;
-      let embeddedFontReady = false;
 
       function getSelectedValue(inputs) {
         return inputs.find((input) => input.checked)?.value;
@@ -591,6 +618,14 @@
       function updateButtonLabel() {
         const format = getSelectedValue(formatInputs);
         downloadButton.textContent = `הורדת ${format.toUpperCase()}`;
+        copyButton.textContent = `העתקת ${format.toUpperCase()}`;
+      }
+
+      function syncActionState(isValid) {
+        const disabled = !isValid || downloadInFlight;
+
+        downloadButton.disabled = disabled;
+        copyButton.disabled = disabled;
       }
 
       function syncUi() {
@@ -609,15 +644,13 @@
         updateButtonLabel();
 
         if (validation.valid) {
-          fileName.textContent = `${buildFileName(typeKey, roadNumber)}.${getSelectedValue(formatInputs)}`;
           setStatus("מוכן להורדה ב־SVG או PNG.", false);
-          downloadButton.disabled = false;
+          syncActionState(true);
           return;
         }
 
-        fileName.textContent = "ממתין למספר כביש תקין";
         setStatus(validation.message, true);
-        downloadButton.disabled = true;
+        syncActionState(false);
       }
 
       function downloadBlob(blob, downloadName) {
@@ -678,14 +711,80 @@
         });
       }
 
+      function copyTextFallback(text) {
+        const textarea = document.createElement("textarea");
+
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.top = "-1000px";
+        document.body.append(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+
+        try {
+          return document.execCommand("copy");
+        } finally {
+          textarea.remove();
+        }
+      }
+
+      async function writeSvgToClipboard(svgMarkup) {
+        const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+
+        if (window.ClipboardItem && navigator.clipboard?.write) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "image/svg+xml": svgBlob,
+              "text/plain": new Blob([svgMarkup], { type: "text/plain" })
+            })
+          ]);
+          return;
+        }
+
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(svgMarkup);
+          return;
+        }
+
+        if (!copyTextFallback(svgMarkup)) {
+          throw new Error("SVG clipboard fallback failed");
+        }
+      }
+
+      async function writePngToClipboard(svgMarkup) {
+        const pngBlob = await renderPngBlob(svgMarkup);
+
+        if (!window.ClipboardItem || !navigator.clipboard?.write) {
+          throw new Error("PNG clipboard unsupported");
+        }
+
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": pngBlob
+          })
+        ]);
+      }
+
+      function getCurrentSelection() {
+        const typeKey = getSelectedValue(typeInputs);
+        const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
+        const format = getSelectedValue(formatInputs);
+
+        return {
+          typeKey,
+          roadNumber,
+          format,
+          validation: validateRoadNumber(typeKey, roadNumber)
+        };
+      }
+
       async function handleDownload() {
         if (downloadInFlight) {
           return;
         }
 
-        const typeKey = getSelectedValue(typeInputs);
-        const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
-        const validation = validateRoadNumber(typeKey, roadNumber);
+        const { typeKey, roadNumber, format, validation } = getCurrentSelection();
 
         if (!validation.valid) {
           syncUi();
@@ -693,21 +792,13 @@
           return;
         }
 
-        const format = getSelectedValue(formatInputs);
         downloadInFlight = true;
+        syncActionState(true);
         downloadButton.setAttribute("aria-busy", "true");
         downloadButton.textContent = format === "svg" ? "מכין SVG..." : "מכין PNG...";
 
         try {
-          if (!embeddedFontReady) {
-            await primeEmbeddedFont();
-            embeddedFontReady = true;
-          }
-
-          const svgMarkup =
-            buildSignSvg(typeKey, roadNumber, {
-              fontDataUrl: getCachedEmbeddedFontDataUrl()
-            });
+          const svgMarkup = buildSignSvg(typeKey, roadNumber);
           const baseFileName = buildFileName(typeKey, roadNumber);
 
           if (format === "svg") {
@@ -729,20 +820,58 @@
         }
       }
 
+      async function handleCopy() {
+        if (downloadInFlight) {
+          return;
+        }
+
+        const { typeKey, roadNumber, format, validation } = getCurrentSelection();
+
+        if (!validation.valid) {
+          syncUi();
+          roadNumberInput.focus();
+          return;
+        }
+
+        downloadInFlight = true;
+        syncActionState(true);
+        copyButton.setAttribute("aria-busy", "true");
+        copyButton.textContent = format === "svg" ? "מעתיק SVG..." : "מעתיק PNG...";
+
+        try {
+          const svgMarkup = buildSignSvg(typeKey, roadNumber);
+
+          if (format === "svg") {
+            await writeSvgToClipboard(svgMarkup);
+            setStatus("SVG הועתק ללוח.", false);
+            return;
+          }
+
+          await writePngToClipboard(svgMarkup);
+          setStatus("PNG הועתק ללוח.", false);
+        } catch (error) {
+          console.error(error);
+          setStatus(
+            format === "svg"
+              ? "העתקת SVG נכשלה."
+              : "העתקת PNG נכשלה. אפשר לנסות SVG או הורדה.",
+            true
+          );
+        } finally {
+          downloadInFlight = false;
+          copyButton.removeAttribute("aria-busy");
+          syncUi();
+        }
+      }
+
       roadNumberInput.addEventListener("input", syncUi);
       typeInputs.forEach((input) => input.addEventListener("change", syncUi));
       formatInputs.forEach((input) => input.addEventListener("change", syncUi));
       downloadButton.addEventListener("click", handleDownload);
+      copyButton.addEventListener("click", handleCopy);
 
       syncUi();
       primeDocumentFont(document).then(syncUi, syncUi);
-      primeEmbeddedFont()
-        .then(() => {
-          embeddedFontReady = true;
-        })
-        .catch(() => {
-          embeddedFontReady = false;
-        });
     </script>
   </body>
 </html>

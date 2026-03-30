@@ -37,7 +37,7 @@ test("buildSignSvg includes the official shield geometry, colour and embedded fo
   assert.match(svg, new RegExp(`viewBox="0 0 ${SIGN_VIEW_BOX.width} ${SIGN_VIEW_BOX.height}"`));
   assert.ok(svg.includes(SHIELD_PATH));
   assert.ok(svg.includes(`fill="${ROAD_TYPES.regional.colour}"`));
-  assert.ok(svg.includes(FONT_VARIANTS[DEFAULT_FONT_KEY].fileName));
+  assert.ok(svg.includes('data:font/truetype;base64,'));
   assert.ok(svg.includes(">293<"));
   assert.ok(svg.includes('aria-label="כביש אזורי 293"'));
 });
