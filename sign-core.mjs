@@ -158,6 +158,7 @@ export const SHIELD_PATH = "m 23.944793,8.0697922 c -8.79475,0 -15.8750008,7.080
 export const ROAD_TYPES = {
   national: {
     label: "כביש מהיר",
+    ruleLabel: "כבישים מהירים",
     colour: "#0000fe",
     minDigits: 1,
     maxDigits: 3,
@@ -165,6 +166,7 @@ export const ROAD_TYPES = {
   },
   intercity: {
     label: "כביש ארצי",
+    ruleLabel: "כבישים ארציים",
     colour: "#ff0000",
     minDigits: 1,
     maxDigits: 2,
@@ -172,6 +174,7 @@ export const ROAD_TYPES = {
   },
   regional: {
     label: "כביש אזורי",
+    ruleLabel: "כבישים אזוריים",
     colour: "#007e00",
     minDigits: 3,
     maxDigits: 3,
@@ -179,6 +182,7 @@ export const ROAD_TYPES = {
   },
   local: {
     label: "כביש מקומי",
+    ruleLabel: "כבישים מקומיים",
     colour: "#000000",
     minDigits: 4,
     maxDigits: 4,
@@ -231,27 +235,29 @@ function escapeXml(value) {
 }
 
 export function getRuleText(config) {
+  const ruleLabel = config.ruleLabel ?? config.label;
+
   if (config.minDigits === 1 && config.maxDigits === 2) {
-    return `${config.label} ממוספרים במספר חד־ספרתי או דו־ספרתי.`;
+    return `${ruleLabel} ממוספרים במספר חד־ספרתי או דו־ספרתי.`;
   }
 
   if (config.minDigits === 1 && config.maxDigits === 3) {
-    return `${config.label} ממוספרים במספר חד־ספרתי, דו־ספרתי, או תלת־ספרתי.`;
+    return `${ruleLabel} ממוספרים במספר חד־ספרתי, דו־ספרתי, או תלת־ספרתי.`;
   }
 
   if (config.minDigits === 3 && config.maxDigits === 3) {
-    return `${config.label} ממוספרים במספר תלת־ספרתי.`;
+    return `${ruleLabel} ממוספרים במספר תלת־ספרתי.`;
   }
 
   if (config.minDigits === 4 && config.maxDigits === 4) {
-    return `${config.label} ממוספרים במספר בן ארבע ספרות.`;
+    return `${ruleLabel} ממוספרים במספר בן ארבע ספרות.`;
   }
 
   if (config.minDigits === config.maxDigits) {
-    return `${config.label} ממוספרים במספר בן ${config.minDigits} ספרות.`;
+    return `${ruleLabel} ממוספרים במספר בן ${config.minDigits} ספרות.`;
   }
 
-  return `${config.label} ממוספרים במספר בן ${config.minDigits} עד ${config.maxDigits} ספרות.`;
+  return `${ruleLabel} ממוספרים במספר בן ${config.minDigits} עד ${config.maxDigits} ספרות.`;
 }
 
 export function validateRoadNumber(typeKey, roadNumber) {

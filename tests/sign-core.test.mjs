@@ -22,11 +22,11 @@ test("validateRoadNumber enforces the Israeli route digit rules", () => {
   assert.deepEqual(validateRoadNumber("national", "1"), { valid: true, message: "מוכן להורדה." });
   assert.deepEqual(validateRoadNumber("intercity", "123"), {
     valid: false,
-    message: "כביש ארצי ממוספרים במספר חד־ספרתי או דו־ספרתי."
+    message: "כבישים ארציים ממוספרים במספר חד־ספרתי או דו־ספרתי."
   });
   assert.deepEqual(validateRoadNumber("regional", "29"), {
     valid: false,
-    message: "כביש אזורי ממוספרים במספר תלת־ספרתי."
+    message: "כבישים אזוריים ממוספרים במספר תלת־ספרתי."
   });
   assert.deepEqual(validateRoadNumber("local", "2022"), { valid: true, message: "מוכן להורדה." });
 });
