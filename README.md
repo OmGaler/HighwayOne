@@ -24,6 +24,7 @@ The app is designed to be:
   - **Black** - local (tertiary) routes
 - Clean rendering using HTML/CSS/SVG  
 - Instant preview (no reloads)  
+- Regular or small-sized PNG downloads
 - Fully static (no backend required)  
 
 ## How It Works

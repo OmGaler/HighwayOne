@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_FONT_KEY,
   FONT_VARIANTS,
+  OUTPUT_SIZE,
+  PNG_OUTPUT_SIZES,
   ROAD_TYPES,
   SHIELD_PATH,
   SIGN_VIEW_BOX,
@@ -51,6 +53,22 @@ test("buildSignSvg falls back to the category sample for preview output", () => 
 
   assert.ok(svg.includes(ROAD_TYPES.local.colour));
   assert.ok(svg.includes('role="img"'));
+});
+
+test("PNG output sizes keep regular export unchanged and add a presentation size", () => {
+  assert.deepEqual(PNG_OUTPUT_SIZES.regular, {
+    width: OUTPUT_SIZE.width,
+    height: OUTPUT_SIZE.height,
+    pixelScale: null,
+    fileNameSuffix: ""
+  });
+  assert.deepEqual(PNG_OUTPUT_SIZES.presentation, {
+    width: Math.round((OUTPUT_SIZE.width / OUTPUT_SIZE.height) * 38),
+    height: 38,
+    pixelScale: 1,
+    clipboardHeightCm: 1,
+    fileNameSuffix: "-presentation"
+  });
 });
 
 test("buildFileName uses the road type and number", () => {

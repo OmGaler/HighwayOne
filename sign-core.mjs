@@ -153,6 +153,22 @@ export const OUTPUT_SIZE = {
   height: 501
 };
 
+export const PNG_OUTPUT_SIZES = {
+  regular: {
+    width: OUTPUT_SIZE.width,
+    height: OUTPUT_SIZE.height,
+    pixelScale: null,
+    fileNameSuffix: ""
+  },
+  presentation: {
+    width: Math.round((OUTPUT_SIZE.width / OUTPUT_SIZE.height) * 38),
+    height: 38,
+    pixelScale: 1,
+    clipboardHeightCm: 1,
+    fileNameSuffix: "-presentation"
+  }
+};
+
 export const SHIELD_PATH = "m 23.944793,8.0697922 c -8.79475,0 -15.8750008,7.0802508 -15.8750008,15.8750008 v 84.666667 c 0,8.79475 7.0802508,15.875 15.8750008,15.875 H 157.82396 c 8.79475,0 15.875,-7.08025 15.875,-15.875 V 23.944793 c 0,-8.79475 -7.08025,-15.8750008 -15.875,-15.8750008 z m 66.939585,9.7895838 64.822922,7.9375 7.9375,40.481251 -7.9375,40.481253 -64.822922,7.9375 -65.352085,-7.9375 -7.408334,-40.481253 7.408334,-40.481251 z";
 
 export const ROAD_TYPES = {

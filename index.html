@@ -546,6 +546,29 @@
               </div>
             </section>
 
+            <section id="png-size-section">
+              <span class="label">גודל לייצוא</span>
+              <div class="choice-grid formats">
+                <label class="choice" style="--choice-colour: var(--active);">
+                  <input type="radio" name="png-size" value="regular" checked>
+                  <span class="choice-body">
+                    <span>
+                      <strong>רגיל</strong>
+                    </span>
+                  </span>
+                </label>
+
+                <label class="choice" style="--choice-colour: var(--active);">
+                  <input type="radio" name="png-size" value="presentation">
+                  <span class="choice-body">
+                    <span>
+                      <strong>קטן</strong>
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
             <div class="action-row">
               <button id="download" class="download" type="button">הורדת SVG</button>
               <button id="copy" class="secondary-action" type="button">העתקת SVG</button>
@@ -588,7 +611,7 @@
     <script type="module">
       import {
         ROAD_TYPES,
-        OUTPUT_SIZE,
+        PNG_OUTPUT_SIZES,
         buildFileName,
         buildSignSvg,
         getRuleText,
@@ -599,7 +622,9 @@
 
       const typeInputs = Array.from(document.querySelectorAll('input[name="road-type"]'));
       const formatInputs = Array.from(document.querySelectorAll('input[name="export-format"]'));
+      const pngSizeInputs = Array.from(document.querySelectorAll('input[name="png-size"]'));
       const roadNumberInput = document.querySelector("#road-number");
+      const pngSizeSection = document.querySelector("#png-size-section");
       const preview = document.querySelector("#preview");
       const helper = document.querySelector("#helper");
       const status = document.querySelector("#status");
@@ -622,6 +647,15 @@
         copyButton.textContent = `העתקת ${format.toUpperCase()}`;
       }
 
+      function syncPngSizeVisibility(format) {
+        const isPng = format === "png";
+
+        pngSizeSection.hidden = !isPng;
+        pngSizeInputs.forEach((input) => {
+          input.disabled = !isPng;
+        });
+      }
+
       function syncActionState(isValid) {
         const disabled = !isValid || downloadInFlight;
 
@@ -633,6 +667,7 @@
         const typeKey = getSelectedValue(typeInputs);
         const config = ROAD_TYPES[typeKey];
         const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
+        const format = getSelectedValue(formatInputs);
         const validation = validateRoadNumber(typeKey, roadNumber);
 
         if (roadNumberInput.value !== roadNumber) {
@@ -643,6 +678,7 @@
         helper.textContent = getRuleText(config);
         preview.innerHTML = buildSignSvg(typeKey, roadNumber);
         updateButtonLabel();
+        syncPngSizeVisibility(format);
 
         if (validation.valid) {
           setStatus("מוכן להורדה ב־SVG או PNG.", false);
@@ -668,12 +704,20 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
 
-      function renderPngBlob(svgMarkup) {
+      function getPngOutputSize() {
+        return PNG_OUTPUT_SIZES[getSelectedValue(pngSizeInputs)] ?? PNG_OUTPUT_SIZES.regular;
+      }
+
+      function getDefaultPngPixelScale() {
+        return window.devicePixelRatio > 1 ? 4 : 3;
+      }
+
+      function renderPngBlob(svgMarkup, outputSize = PNG_OUTPUT_SIZES.regular) {
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
-        const width = OUTPUT_SIZE.width;
-        const height = OUTPUT_SIZE.height;
-        const scale = window.devicePixelRatio > 1 ? 4 : 3;
+        const width = outputSize.width;
+        const height = outputSize.height;
+        const scale = outputSize.pixelScale ?? getDefaultPngPixelScale();
 
         if (!context) {
           return Promise.reject(new Error("Canvas not supported"));
@@ -753,8 +797,21 @@
         }
       }
 
-      async function writePngToClipboard(svgMarkup) {
-        const pngBlob = await renderPngBlob(svgMarkup);
+      function sizeSvgForClipboard(svgMarkup, heightCm) {
+        const widthCm = heightCm * (PNG_OUTPUT_SIZES.regular.width / PNG_OUTPUT_SIZES.regular.height);
+
+        return svgMarkup
+          .replace(/width="[^"]+"/, `width="${widthCm.toFixed(2)}cm"`)
+          .replace(/height="[^"]+"/, `height="${heightCm}cm"`);
+      }
+
+      async function writePngToClipboard(svgMarkup, outputSize = PNG_OUTPUT_SIZES.regular) {
+        if (outputSize.clipboardHeightCm) {
+          await writeSvgToClipboard(sizeSvgForClipboard(svgMarkup, outputSize.clipboardHeightCm));
+          return;
+        }
+
+        const pngBlob = await renderPngBlob(svgMarkup, outputSize);
 
         if (!window.ClipboardItem || !navigator.clipboard?.write) {
           throw new Error("PNG clipboard unsupported");
@@ -771,11 +828,13 @@
         const typeKey = getSelectedValue(typeInputs);
         const roadNumber = sanitiseRoadNumber(roadNumberInput.value);
         const format = getSelectedValue(formatInputs);
+        const pngOutputSize = getPngOutputSize();
 
         return {
           typeKey,
           roadNumber,
           format,
+          pngOutputSize,
           validation: validateRoadNumber(typeKey, roadNumber)
         };
       }
@@ -785,7 +844,7 @@
           return;
         }
 
-        const { typeKey, roadNumber, format, validation } = getCurrentSelection();
+        const { typeKey, roadNumber, format, pngOutputSize, validation } = getCurrentSelection();
 
         if (!validation.valid) {
           syncUi();
@@ -808,8 +867,8 @@
             return;
           }
 
-          const pngBlob = await renderPngBlob(svgMarkup);
-          downloadBlob(pngBlob, `${baseFileName}.png`);
+          const pngBlob = await renderPngBlob(svgMarkup, pngOutputSize);
+          downloadBlob(pngBlob, `${baseFileName}${pngOutputSize.fileNameSuffix}.png`);
           setStatus("קובץ PNG נוצר.", false);
         } catch (error) {
           console.error(error);
@@ -826,7 +885,7 @@
           return;
         }
 
-        const { typeKey, roadNumber, format, validation } = getCurrentSelection();
+        const { typeKey, roadNumber, format, pngOutputSize, validation } = getCurrentSelection();
 
         if (!validation.valid) {
           syncUi();
@@ -848,7 +907,7 @@
             return;
           }
 
-          await writePngToClipboard(svgMarkup);
+          await writePngToClipboard(svgMarkup, pngOutputSize);
           setStatus("PNG הועתק ללוח.", false);
         } catch (error) {
           console.error(error);
